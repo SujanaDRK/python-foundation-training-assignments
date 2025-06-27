@@ -1,0 +1,17 @@
+# Byte‐compiled / cache files
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# SQLite database files
+*.sqlite
+challenge_db.sqlite
+
+# VS Code settings
+.vscode/
+
+# OS files
+.DS_Store
