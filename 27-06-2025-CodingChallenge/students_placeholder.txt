@@ -1,0 +1,14 @@
+This file is just to exercise the feature/students branch.
+# A. Create and switch to a new branch
+git checkout -b feature/students
+
+# B. Stage and commit only your placeholder file
+git add students_placeholder.txt
+git commit -m "Add placeholder file on feature/students branch"
+
+# C. Switch back to main
+git checkout main
+
+# D. Merge feature/students into main
+git merge feature/students
+
