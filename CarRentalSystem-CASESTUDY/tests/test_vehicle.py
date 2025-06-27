@@ -1,24 +1,22 @@
 # tests/test_vehicle.py
-
 import unittest
-from entity.vehicle import Vehicle
 from dao.icar_lease_repository_impl import ICarLeaseRepositoryImpl
+from exception.custom_exceptions import VehicleNotFoundException
 
 class TestVehicleOperations(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         cls.repo = ICarLeaseRepositoryImpl()
-        cls.test_vehicle = Vehicle(0, "TestBrand", "TestModel", 2024, 1500.0, "available", 5, 2.0)
 
-    def test_add_vehicle(self):
-        self.repo.addCar(self.test_vehicle)
-        available = self.repo.listAvailableCars()
-        self.assertTrue(any(v[1] == "TestBrand" for v in available))
+    def test_remove_vehicle_not_found(self):
+        with self.assertRaises(VehicleNotFoundException):
+            self.repo.removeCar(999999)
 
-    def test_list_available_vehicles(self):
-        result = self.repo.listAvailableCars()
-        self.assertIsInstance(result, list)
+    def test_find_vehicle_not_found(self):
+        with self.assertRaises(VehicleNotFoundException):
+            self.repo.findCarById(999999)
+ 
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,8 +4,7 @@ from entity.customer import Customer
 from entity.vehicle import Vehicle
 from entity.lease import Lease
 from entity.payment import Payment
-from exception.custom_exceptions import CustomerNotFoundException
-
+from exception.custom_exceptions import CustomerNotFoundException, VehicleNotFoundException, LeaseNotFoundException
 
 class ICarLeaseRepositoryImpl(ICarLeaseRepository):
 
@@ -14,10 +13,9 @@ class ICarLeaseRepositoryImpl(ICarLeaseRepository):
     # -------------------------------
 
     def addCustomer(self, customer):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
-
             query = """
             INSERT INTO Customer (firstName, lastName, email, phoneNumber)
             VALUES (%s, %s, %s, %s)
@@ -26,67 +24,50 @@ class ICarLeaseRepositoryImpl(ICarLeaseRepository):
             cursor.execute(query, data)
             conn.commit()
             print("Customer added successfully!")
-
-        except Exception as e:
-            print("Error adding customer:", e)
-
         finally:
             if conn.is_connected():
                 cursor.close()
                 conn.close()
 
     def removeCustomer(self, customerID):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
-
             cursor.execute("SELECT COUNT(*) FROM Lease WHERE customerID = %s", (customerID,))
             lease_count = cursor.fetchone()[0]
-
             if lease_count > 0:
                 print(f"Cannot delete: Customer ID {customerID} has active or historical leases.")
                 return
-
             cursor.execute("DELETE FROM Customer WHERE customerID = %s", (customerID,))
             conn.commit()
-
             if cursor.rowcount == 0:
-               raise CustomerNotFoundException(customerID)
-
+                raise CustomerNotFoundException(customerID)  # <-- Let this propagate!
             else:
                 print(f"Customer ID {customerID} removed successfully.")
-
-        except Exception as e:
-            print("Error removing customer:", e)
-
         finally:
             if conn.is_connected():
                 cursor.close()
                 conn.close()
 
     def listCustomers(self):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
             cursor.execute("SELECT * FROM Customer")
             customers = cursor.fetchall()
             return customers
-        except Exception as e:
-            print("Error listing customers:", e)
         finally:
             if conn.is_connected():
                 cursor.close()
                 conn.close()
 
     def findCustomerById(self, customerID):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
             cursor.execute("SELECT * FROM Customer WHERE customerID = %s", (customerID,))
             customer = cursor.fetchone()
             return customer
-        except Exception as e:
-            print("Error finding customer:", e)
         finally:
             if conn.is_connected():
                 cursor.close()
@@ -97,9 +78,9 @@ class ICarLeaseRepositoryImpl(ICarLeaseRepository):
     # -------------------------------
 
     def addCar(self, car):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
             query = """
                 INSERT INTO Vehicle (make, model, year, dailyRate, status, passengerCapacity, engineCapacity)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -108,48 +89,42 @@ class ICarLeaseRepositoryImpl(ICarLeaseRepository):
             cursor.execute(query, data)
             conn.commit()
             print("Vehicle added successfully!")
-        except Exception as e:
-            print("Error adding vehicle:", e)
         finally:
             if conn.is_connected():
                 cursor.close()
                 conn.close()
 
     def removeCar(self, carID):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
             cursor.execute("DELETE FROM Vehicle WHERE vehicleID = %s", (carID,))
             conn.commit()
             if cursor.rowcount == 0:
-                print(f"Car ID {carID} not found.")
+                raise VehicleNotFoundException(carID)  # Also propagate exception for vehicles!
             else:
                 print(f"Car ID {carID} removed successfully.")
-        except Exception as e:
-            print("Error removing vehicle:", e)
         finally:
             if conn.is_connected():
                 cursor.close()
                 conn.close()
 
     def listAvailableCars(self):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
             cursor.execute("SELECT * FROM Vehicle WHERE status = 'available'")
             result = cursor.fetchall()
             return result
-        except Exception as e:
-            print("Error fetching available vehicles:", e)
         finally:
             if conn.is_connected():
                 cursor.close()
                 conn.close()
 
     def listRentedCars(self):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
             cursor.execute("""
                 SELECT V.* FROM Vehicle V
                 JOIN Lease L ON V.vehicleID = L.vehicleID
@@ -157,22 +132,20 @@ class ICarLeaseRepositoryImpl(ICarLeaseRepository):
             """)
             result = cursor.fetchall()
             return result
-        except Exception as e:
-            print("Error fetching rented vehicles:", e)
         finally:
             if conn.is_connected():
                 cursor.close()
                 conn.close()
 
     def findCarById(self, carID):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
             cursor.execute("SELECT * FROM Vehicle WHERE vehicleID = %s", (carID,))
             car = cursor.fetchone()
+            if not car:
+                raise VehicleNotFoundException(carID)
             return car
-        except Exception as e:
-            print("Error finding vehicle:", e)
         finally:
             if conn.is_connected():
                 cursor.close()
@@ -183,10 +156,9 @@ class ICarLeaseRepositoryImpl(ICarLeaseRepository):
     # -------------------------------
 
     def createLease(self, customerID, carID, startDate, endDate):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
-
             query = """
                 INSERT INTO Lease (vehicleID, customerID, startDate, endDate, type)
                 VALUES (%s, %s, %s, %s, %s)
@@ -195,71 +167,53 @@ class ICarLeaseRepositoryImpl(ICarLeaseRepository):
             data = (carID, customerID, startDate, endDate, lease_type)
             cursor.execute(query, data)
             conn.commit()
-
             cursor.execute("UPDATE Vehicle SET status = 'notAvailable' WHERE vehicleID = %s", (carID,))
             conn.commit()
-
             print("Lease created successfully.")
-
-        except Exception as e:
-            print("Error creating lease:", e)
-
         finally:
             if conn.is_connected():
                 cursor.close()
                 conn.close()
 
     def returnCar(self, leaseID):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
-
             cursor.execute("SELECT vehicleID FROM Lease WHERE leaseID = %s", (leaseID,))
             result = cursor.fetchone()
             if result is None:
-                print(f"No lease found with ID {leaseID}")
-                return
+                raise LeaseNotFoundException(leaseID)
             vehicleID = result[0]
-
             cursor.execute("UPDATE Lease SET endDate = CURDATE() WHERE leaseID = %s", (leaseID,))
             cursor.execute("UPDATE Vehicle SET status = 'available' WHERE vehicleID = %s", (vehicleID,))
             conn.commit()
-
             print("Car returned successfully.")
-
-        except Exception as e:
-            print("Error returning car:", e)
-
         finally:
             if conn.is_connected():
                 cursor.close()
                 conn.close()
 
     def listActiveLeases(self):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
             query = "SELECT * FROM Lease WHERE CURDATE() BETWEEN startDate AND endDate"
             cursor.execute(query)
             result = cursor.fetchall()
             return result
-        except Exception as e:
-            print("Error fetching active leases:", e)
         finally:
             if conn.is_connected():
                 cursor.close()
                 conn.close()
 
     def listLeaseHistory(self):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
             query = "SELECT * FROM Lease WHERE endDate < CURDATE()"
             cursor.execute(query)
             result = cursor.fetchall()
             return result
-        except Exception as e:
-            print("Error fetching lease history:", e)
         finally:
             if conn.is_connected():
                 cursor.close()
@@ -270,9 +224,9 @@ class ICarLeaseRepositoryImpl(ICarLeaseRepository):
     # -------------------------------
 
     def recordPayment(self, lease, amount):
+        conn = get_connection()
+        cursor = conn.cursor()
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
             query = """
                 INSERT INTO Payment (leaseID, paymentDate, amount)
                 VALUES (%s, CURDATE(), %s)
@@ -280,8 +234,6 @@ class ICarLeaseRepositoryImpl(ICarLeaseRepository):
             cursor.execute(query, (lease, amount))
             conn.commit()
             print("Payment recorded successfully.")
-        except Exception as e:
-            print("Error recording payment:", e)
         finally:
             if conn.is_connected():
                 cursor.close()
