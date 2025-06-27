@@ -25,22 +25,22 @@ class User(Person):
     def borrow_book(self, title, library):
         book = library.find_book(title)
         if not book:
-            print(f"  ➔ Book '{title}' not found.")
+            print(f" Book '{title}' not found.")
         elif not book.available:
-            print(f"  ➔ '{title}' is already checked out.")
+            print(f" '{title}' is already checked out.")
         else:
             book.available = False
             self.borrowed_books.append(book)
-            print(f"  ➔ You have borrowed '{title}'.")
+            print(f" You have borrowed '{title}'.")
 
     def return_book(self, title, library):
         for book in self.borrowed_books:
             if book.title.lower() == title.lower():
                 book.available = True
                 self.borrowed_books.remove(book)
-                print(f"  ➔ You have returned '{title}'.")
+                print(f" You have returned '{title}'.")
                 return
-        print(f"  ➔ You did not borrow '{title}'.")
+        print(f"  You did not borrow '{title}'.")
 
 
 class Book:
